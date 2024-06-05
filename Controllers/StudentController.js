@@ -25,15 +25,11 @@ const RegisterUser = AsyncHandler(async(req, res)=> {
     const user = Student.create({
         username, 
         password : hashedPassword,
-        role,
+        name
     });
 
     if(user){
-        res.status(201).json({
-            _id : user.id,
-            username : user.username,
-            role : user.role
-        });
+        res.status(201).json(user);
     }
     else{
         res.status(401);
@@ -57,7 +53,7 @@ const LoginUser = AsyncHandler(async(req, res) => {
             {
                 user: {
                     id: user.id,
-                    role : user.role,
+                    name : user.name,
                     username: user.username,
                 },
             },

@@ -22,11 +22,6 @@ const StudentSchema = mongoose.Schema({
         type : Date,
         default : Date.now
     },
-
-    borrowedBooks : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'Book',
-    },
 },
 {
     timestamps : true,

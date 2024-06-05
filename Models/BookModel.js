@@ -16,14 +16,10 @@ const BookSchema = mongoose.Schema({
         default : true
     },
 
-    returnDate : {
-        type : Date,
-    },
-
-    borrowedBy : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : 'Student',
-    },
+    quantity : {
+        type : Number,
+        required : true,
+    }
 },
 {
     timestamps : true,

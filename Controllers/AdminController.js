@@ -27,7 +27,7 @@ const RegisterUser = async(req, res)=> {
     const user = Admin.create({
         username, 
         password : hashedPassword,
-        role,
+        name,
     });
 
     if(user){
@@ -63,7 +63,7 @@ const LoginUser = AsyncHandler(async (req, res) => {
             {
                 user: {
                     id: user.id,
-                    role : user.role,
+                    name : user.name,
                     username: user.username,
                 },
             },
