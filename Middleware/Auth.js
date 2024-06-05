@@ -27,4 +27,11 @@ const ValidToken = AsyncHandler((req, res, next) => {
     }
 });
 
-module.exports = ValidToken;
+const AuthorizeUser = (req, res, next) => {
+    if(req.user && res.user.id === req.params.userId)
+        next();
+    else
+        res.status(403).json({message : "You are not authorized to access this file!"});
+};
+
+module.exports = ValidToken, AuthorizeUser;
