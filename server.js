@@ -1,6 +1,5 @@
 const express = require("express");
 const dotenv = require("dotenv").config();
-const mongoose = require("mongoose");
 const dbConnect = require("./Config/dbConnect");
 const ErrorHandler = require("./Middleware/ErrorHandle");
 
@@ -12,6 +11,7 @@ app.use(express.json());
 app.use("/api/student", require("./Routes/StudentRoute"));
 app.use("/api/admin", require("./Routes/AdminRoute"));
 app.use("/api/books", require("./Routes/BookRoute"));
+app.use("/api/student/book", require("./Routes/BorrowRoute"));
 app.use(ErrorHandler);
 
 app.listen(port, () => {

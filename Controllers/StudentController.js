@@ -5,14 +5,14 @@ const Student = require("../Models/StudentModel");
 const Book = require("../Models/BookModel");
 
 const RegisterUser = AsyncHandler(async(req, res)=> {
-    const {username, password, name} = req.body;
+    const {regno, password, name} = req.body;
 
-    if(!username || !password || !name) {
+    if(!regno || !password || !name) {
             res.status(400);
             throw new Error("Please add all fields");
         }
 
-    const UserExists = await Student.findOne({username});
+    const UserExists = await Student.findOne({regno});
 
     if(UserExists){
         res.status(400);
@@ -23,7 +23,7 @@ const RegisterUser = AsyncHandler(async(req, res)=> {
     console.log(hashedPassword);
 
     const user = Student.create({
-        username, 
+        regno, 
         password : hashedPassword,
         name
     });
@@ -39,14 +39,14 @@ const RegisterUser = AsyncHandler(async(req, res)=> {
 });
 
 const LoginUser = AsyncHandler(async(req, res) => {
-    const {username, password} = req.body;
+    const {regno, password} = req.body;
 
-    if(!username || !password){
+    if(!regno || !password){
         res.status(400);
         throw new Error("Please add all fields");
     }
 
-    const user = await Student.findOne({username});
+    const user = await Student.findOne({regno});
 
     if(user && (await bcrypt.compare(password, user.password))){
         const accessToken = jwt.sign(
@@ -54,7 +54,7 @@ const LoginUser = AsyncHandler(async(req, res) => {
                 user: {
                     id: user.id,
                     name : user.name,
-                    username: user.username,
+                    regno: user.regno,
                 },
             },
             process.env.ACCESS_TOKEN_SECRET,

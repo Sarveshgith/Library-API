@@ -7,8 +7,8 @@ const StudentSchema = mongoose.Schema({
         required : true
     },
 
-    username : {
-        type : String,
+    regno : {
+        type : Number,
         required : true,
         unique : true
     },

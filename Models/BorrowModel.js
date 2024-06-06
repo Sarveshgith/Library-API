@@ -10,11 +10,18 @@ const BorrowSchema = mongoose.Schema({
         required : true,
     },
 
-    studentId : {
-        type : mongoose.Schema.Types.ObjectId,
-        ref : "Student",
+    regno : {
+        type : Number,
         required : true,
-    }
+    },
+
+    borrowedAt : {
+        type : Date,
+        default : Date.now,
+    },
+},
+{
+    timestamps : true,
 });
 
 const Borrow = mongoose.model("Borrow", BorrowSchema);
