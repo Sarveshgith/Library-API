@@ -3,75 +3,103 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Student = require("../Models/StudentModel");
 const Book = require("../Models/BookModel");
+const { errHandle } = require("../Middleware/errHandle");
+const DefinedError = require("../Middleware/DefinedError");
 
-const RegisterUser = AsyncHandler(async (req, res) => {
-  const { regno, password, name } = req.body;
+const RegisterUser = async (req, res) => {
+  try {
+    const { regno, password, name } = req.body;
 
-  if (!regno || !password || !name) {
-    res.status(400);
-    throw new Error("Please add all fields");
+    if (!regno || !password || !name) {
+      throw new DefinedError(
+        400,
+        "error",
+        "User Not Added",
+        "User Not Registered"
+      );
+    }
+
+    const UserExists = await Student.findOne({ regno });
+
+    if (UserExists) {
+      throw new DefinedError(
+        404,
+        "error",
+        "User Not Found",
+        "User Not Registered"
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log(hashedPassword);
+
+    const user = await Student.create({
+      regno,
+      password: hashedPassword,
+      name,
+    });
+
+    if (user) {
+      return res.status(201).json(user);
+    }
+  } catch (err) {
+    errHandle(err, err instanceof DefinedError, "User Not Registered", res);
   }
+};
 
-  const UserExists = await Student.findOne({ regno });
+const LoginUser = async (req, res) => {
+  try {
+    const { regno, password } = req.body;
 
-  if (UserExists) {
-    res.status(404);
-    throw new Error("User already Exists");
-  }
+    if (!regno || !password) {
+      throw new DefinedError(
+        400,
+        "error",
+        "Missing Fields",
+        "User Cannot Login"
+      );
+    }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  console.log(hashedPassword);
+    const user = await Student.findOne({ regno });
 
-  const user = Student.create({
-    regno,
-    password: hashedPassword,
-    name,
-  });
-
-  if (user) {
-    res.status(201).json(user);
-  } else {
-    res.status(500);
-    throw new Error("User not created");
-  }
-});
-
-const LoginUser = AsyncHandler(async (req, res) => {
-  const { regno, password } = req.body;
-
-  if (!regno || !password) {
-    res.status(400);
-    throw new Error("Please add all fields");
-  }
-
-  const user = await Student.findOne({ regno });
-
-  if (user && (await bcrypt.compare(password, user.password))) {
-    const accessToken = jwt.sign(
-      {
-        user: {
-          id: user.id,
-          name: user.name,
-          regno: user.regno,
+    if (user && (await bcrypt.compare(password, user.password))) {
+      const accessToken = jwt.sign(
+        {
+          user: {
+            id: user.id,
+            name: user.name,
+            regno: user.regno,
+          },
         },
-      },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "15m" }
-    );
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "15m" }
+      );
 
-    res.status(200).json({ accessToken });
-  } else {
-    res.status(401);
-    throw new Error("Invalid Credentials");
+      return res.status(200).json({ accessToken });
+    } else {
+      throw new DefinedError(
+        401,
+        "error",
+        "Invalid Credantials",
+        "User Cannot Login"
+      );
+    }
+  } catch (err) {
+    errHandle(err, err instanceof DefinedError, "User Cannot Login", res);
   }
-});
+};
 
-const GetBooks = AsyncHandler(async (req, res) => {
-  const book = await Book.find();
-  res.status(200).json(book);
-});
+const GetBooks = async (req, res) => {
+  try {
+    const book = await Book.find();
+    return res.status(200).json(book);
+  } catch (err) {
+    errHandle(err, err instanceof DefinedError, "Book Cannot Retrieved", res);
+  }
+};
+
 // /api/books?title=Harry%20Potter&author=J.K.Rowling
-const GetBook = AsyncHandler(async (req, res) => {
+const GetBook = async (req, res) => {
   const { title, author } = req.query;
 
   try {
@@ -82,12 +110,16 @@ const GetBook = AsyncHandler(async (req, res) => {
     const book = await Book.find({
       $or: [{ title: query.title }, { author: query.author }],
     });
-    res.status(200).json(book);
+    return res.status(200).json(book);
   } catch (error) {
-    res.status(500);
-    throw new Error("Error while Finding!");
+    errHandle(
+      error,
+      error instanceof DefinedError,
+      "Book Cannot Retrieved",
+      res
+    );
   }
-});
+};
 
 module.exports = {
   RegisterUser,

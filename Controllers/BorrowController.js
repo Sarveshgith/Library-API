@@ -1,85 +1,120 @@
-const AsyncHandler = require("express-async-handler");
 const Borrow = require("../Models/BorrowModel");
 const Book = require("../Models/BookModel");
 const Student = require("../Models/StudentModel");
 const { DateDifference } = require("../utils/DateDiff");
-const { format } = require("date-fns");
+const DefinedError = require("../Middleware/DefinedError");
+const { errHandle } = require("../Middleware/errHandle");
+
 const DuePeriod = 14;
-const DueAmount = 10; //perday
-const due = 0;
+const DueAmount = 10; // per day
 
-const BorrowBooks = AsyncHandler(async (req, res) => {
-  const { regno, bookId } = req.body;
+const BorrowBooks = async (req, res) => {
+  try {
+    const { regno, bookId } = req.body;
 
-  if (!regno || !bookId) {
-    res.status(400);
-    throw new Error("Fields are missing!");
+    if (!regno || !bookId) {
+      throw new DefinedError(
+        400,
+        "error",
+        "Missing Fields",
+        "Book Not Borrowed"
+      );
+    }
+
+    const book = await Book.findById(bookId);
+    const student = await Student.findOne({ regno });
+
+    if (!book) {
+      throw new DefinedError(
+        404,
+        "error",
+        "Book Not Found",
+        "Book Not Borrowed"
+      );
+    }
+
+    if (!student) {
+      throw new DefinedError(
+        404,
+        "error",
+        "User Not Found",
+        "Book Not Borrowed"
+      );
+    }
+
+    const borrowCount = await Borrow.countDocuments({ bookId: book._id });
+
+    if (borrowCount >= book.quantity) {
+      throw new DefinedError(
+        401,
+        "error",
+        "Book Not Available",
+        "Book Not Borrowed"
+      );
+    }
+
+    await Borrow.create({ regno, bookId });
+    return res.status(200).send("Book borrowed successfully!");
+  } catch (err) {
+    errHandle(err, err instanceof DefinedError, "Book Not Borrowed", res);
   }
+};
 
-  const book = await Book.findOne({ _id: bookId });
-  const student = await Student.findOne({ regno });
+const ReturnBooks = async (req, res) => {
+  try {
+    const { regno, bookId } = req.body;
 
-  if (!book) {
-    res.status(404);
-    throw new Error("Book not found");
+    if (!regno || !bookId) {
+      throw new DefinedError(
+        400,
+        "error",
+        "Missing Fields",
+        "Book Not Returned"
+      );
+    }
+
+    const borrowedRecord = await Borrow.findOne({ bookId, regno });
+    if (!borrowedRecord) {
+      throw new DefinedError(
+        404,
+        "error",
+        "You Have Not Borrowed This Book",
+        "Book Not Returned"
+      );
+    }
+
+    const book = await Book.findById(bookId);
+    if (!book) {
+      throw new DefinedError(
+        404,
+        "error",
+        "Book Not Found",
+        "Book Not Returned"
+      );
+    }
+
+    const borrowedAt = new Date(borrowedRecord.borrowedAt);
+    const currentDate = new Date();
+    const diff = DateDifference(currentDate, borrowedAt);
+
+    console.log(`It's been ${diff} days since the book was borrowed!`);
+
+    let due = 0;
+    if (diff > DuePeriod) {
+      due = (diff - DuePeriod) * DueAmount;
+    }
+
+    await Borrow.deleteOne({ _id: borrowedRecord._id });
+
+    return res.status(200).json({
+      message: "Book has been returned",
+      DueAmount: due,
+      Book_Name: book.title,
+      Reg_no: regno,
+    });
+  } catch (err) {
+    errHandle(err, err instanceof DefinedError, "Book Not Returned", res);
   }
-
-  if (!student) {
-    res.status(404);
-    throw new Error("User not registered!");
-  }
-
-  const totavail = book.quantity;
-  const borrowCount = await Borrow.countDocuments({ bookId: book._id });
-
-  if (borrowCount >= totavail) {
-    res.status(401);
-    throw new Error("Required book is currently not available");
-  }
-
-  await Borrow.create({ regno, bookId });
-  res.status(200).send("Book borrowed successfully!");
-});
-
-const ReturnBooks = AsyncHandler(async (req, res) => {
-  const { regno, bookId } = req.body;
-
-  if (!regno || !bookId) {
-    res.status(400).json({ error: "Fields are missing!" });
-    return;
-  }
-
-  const borrowedRecord = await Borrow.findOne({ bookId, regno });
-  if (!borrowedRecord) {
-    res.status(404).json({ error: "You have not borrowed this book!" });
-    return;
-  }
-
-  const book = await Book.findById(bookId);
-  if (!book) {
-    res.status(404).json({ error: "Book not found" });
-    return;
-  }
-
-  const borrowedAt = new Date(borrowedRecord.borrowedAt);
-  const currentDate = new Date();
-  const diff = DateDifference(currentDate, borrowedAt);
-
-  console.log(`It's been ${diff} days since the book was borrowed!`);
-
-  let due = 0;
-  if (diff > DuePeriod) {
-    due = (diff - DuePeriod) * DueAmount;
-  }
-
-  await Borrow.deleteOne({ _id: borrowedRecord._id });
-
-  res.status(200).json({
-    message: "Book has been returned",
-    DueAmount: due,
-    Book_Name: book.title,
-    Reg_no: regno,
-  });
-});
+};
 
 module.exports = { BorrowBooks, ReturnBooks };
